@@ -1263,8 +1263,10 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
     }
   }
 
+  const isCodexHarness = adapterType === "codex_local"
+    || (adapterType === "paperclip_runner" && runnerProvider === "codex");
   const thinkingEffortKey =
-    adapterType === "codex_local"
+    isCodexHarness
       ? "modelReasoningEffort"
       : adapterType === "cursor"
         ? "mode"
@@ -1273,7 +1275,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
           : adapterType === "grok_local" ? "reasoningEffort"
           : adapterType === "pi_local" ? "thinking" : "effort";
   const thinkingEffortOptions =
-    adapterType === "codex_local"
+    isCodexHarness
       ? codexReasoningEffortOptions(currentModelId, "Auto").map((option) => ({
           id: option.value,
           label: option.label,
@@ -1294,7 +1296,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                 : claudeThinkingEffortOptions;
   const currentThinkingEffort = isCreate
     ? val!.thinkingEffort
-    : adapterType === "codex_local"
+    : isCodexHarness
       ? eff(
           "adapterConfig",
           "modelReasoningEffort",
@@ -1307,7 +1309,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
           : eff("adapterConfig", thinkingEffortKey, String(config[thinkingEffortKey] ?? ""));
   const showThinkingEffort = adapterType !== "gemini_local"
     && adapterType !== "cursor_cloud"
-    && adapterType !== "paperclip_runner";
+    && (adapterType !== "paperclip_runner" || isCodexHarness);
   const codexSearchEnabled = adapterType === "codex_local"
     ? (isCreate ? Boolean(val!.search) : eff("adapterConfig", "search", Boolean(config.search)))
     : false;
@@ -1721,8 +1723,8 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                 models={models}
                 value={currentModelId}
                 onChange={(v) => {
-                  const supportedEfforts = setupEfforts(adapterType, v);
-                  const clearUnsupportedEffort = ["codex_local", "claude_local", "grok_local"].includes(adapterType)
+                  const supportedEfforts = setupEfforts(isCodexHarness ? "codex_local" : adapterType, v);
+                  const clearUnsupportedEffort = (isCodexHarness || ["claude_local", "grok_local"].includes(adapterType))
                     && Boolean(currentThinkingEffort)
                     && !supportedEfforts.includes(String(currentThinkingEffort));
                   if (isCreate) {

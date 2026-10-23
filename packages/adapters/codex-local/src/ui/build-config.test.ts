@@ -137,6 +137,7 @@ describe("buildPaperclipRunnerConfig", () => {
       codexPermissionMode: "never",
       lifecycleMode: "per_turn",
       model: "gpt-5.4",
+      modelReasoningEffort: "high",
       timeoutSec: 0,
       graceSec: 15,
     });
@@ -144,7 +145,6 @@ describe("buildPaperclipRunnerConfig", () => {
       "engine",
       "agentCommand",
       "stateDir",
-      "modelReasoningEffort",
       "search",
       "fastMode",
       "dangerouslyBypassApprovalsAndSandbox",
@@ -153,6 +153,39 @@ describe("buildPaperclipRunnerConfig", () => {
     ]) {
       expect(config).not.toHaveProperty(unsupportedKey);
     }
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("preserves Ultra for native %s without enabling legacy bypass", (model) => {
+    const config = buildPaperclipRunnerConfig(makeValues({
+      adapterType: "paperclip_runner",
+      model,
+      thinkingEffort: "ultra",
+      dangerouslyBypassSandbox: true,
+      adapterSchemaValues: { provider: "codex", reasoningEffort: "low" },
+    }));
+    expect(config).toMatchObject({ provider: "codex", model, modelReasoningEffort: "ultra" });
+    expect(config).not.toHaveProperty("dangerouslyBypassApprovalsAndSandbox");
+    expect(config).not.toHaveProperty("reasoningEffort");
+  });
+
+  it("clears a schema effort when the operator selects Auto", () => {
+    const config = buildPaperclipRunnerConfig(makeValues({
+      adapterType: "paperclip_runner",
+      thinkingEffort: "",
+      adapterSchemaValues: { provider: "codex", modelReasoningEffort: "ultra", reasoningEffort: "high" },
+    }));
+    expect(config).not.toHaveProperty("modelReasoningEffort");
+    expect(config).not.toHaveProperty("reasoningEffort");
+  });
+
+  it("does not send a stale Codex effort to another native provider", () => {
+    const config = buildPaperclipRunnerConfig(makeValues({
+      adapterType: "paperclip_runner",
+      thinkingEffort: "ultra",
+      adapterSchemaValues: { provider: "opencode", reasoningEffort: "high" },
+    }));
+    expect(config).not.toHaveProperty("modelReasoningEffort");
+    expect(config).not.toHaveProperty("reasoningEffort");
   });
 
   it("persists bounded Codex permission and warm lifecycle values", () => {

@@ -73,6 +73,9 @@ export function buildCodexLocalConfig(v: CreateConfigValues): Record<string, unk
 export function buildPaperclipRunnerConfig(v: CreateConfigValues): Record<string, unknown> {
   const config = buildCodexLocalConfig(v);
   const schemaValues = normalizeLegacyRunnerProvider({ ...(v.adapterSchemaValues ?? {}) });
+  const configuredEffort = typeof v.thinkingEffort === "string"
+    ? v.thinkingEffort.trim()
+    : schemaValues.modelReasoningEffort ?? schemaValues.reasoningEffort ?? schemaValues.effort;
   for (const unsupportedKey of [
     "engine",
     "agentCommand",
@@ -83,6 +86,8 @@ export function buildPaperclipRunnerConfig(v: CreateConfigValues): Record<string
     "dangerouslyBypassApprovalsAndSandbox",
     "dangerouslyBypassSandbox",
     "modelReasoningEffort",
+    "reasoningEffort",
+    "effort",
     "search",
     "fastMode",
     "command",
@@ -214,7 +219,10 @@ export function buildPaperclipRunnerConfig(v: CreateConfigValues): Record<string
     ...schemaValues,
     provider,
     ...(provider === "codex"
-      ? { model: resolvePaperclipRunnerModel("codex", config.model) }
+      ? {
+          model: resolvePaperclipRunnerModel("codex", config.model),
+          ...(configuredEffort ? { modelReasoningEffort: configuredEffort } : {}),
+        }
       : {}),
     codexPermissionMode: "never",
     opencodePermissionMode: resolvePaperclipRunnerPermissionMode(
