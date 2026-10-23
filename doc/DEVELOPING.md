@@ -192,6 +192,11 @@ choices. Codex uses the curated adapter catalog unless the instance declares
 `PAPERCLIP_ADAPTER_MODELS`; general OpenAI API models are not Codex choices.
 The Paperclip Runner Codex profile shows the same known model effort levels.
 Its selected effort is saved with the run and sent to Codex for each turn.
+Agent **Harness / Runtime** settings also expose these model-specific levels
+for the native Codex provider. The form saves the selected value as
+`modelReasoningEffort`, including `ultra` for supported models. Creating a native
+profile preserves that value and removes legacy CLI bypass and argument fields.
+Other native providers do not show the Codex effort control.
 When Codex reports that a selected model is not supported with a ChatGPT account,
 the task shows **Model unavailable**, the provider's account restriction, and
 guidance to choose a supported model or clear the task's model override before

@@ -811,7 +811,7 @@ describe("AgentConfigForm environment selector", () => {
     expect(result.container.querySelector("select")).toBeNull();
   });
 
-  it("renders GPT-6 Astra and its model-specific reasoning efforts", async () => {
+  it.each(["codex_local", "paperclip_runner"])("renders Astra effort choices for %s and saves the selected effort", async (adapterType) => {
     mockAgentsApi.adapterModels.mockResolvedValue([
       { id: "gpt-5.6-sol", label: "gpt-5.6-sol" },
       { id: "gpt-6-astra", label: "gpt-6-astra" },
@@ -819,7 +819,9 @@ describe("AgentConfigForm environment selector", () => {
     const result = await renderForm(
       [makeEnvironment({ id: "local-1", name: "Local", driver: "local" })],
       {
+        adapterType,
         adapterConfig: {
+          ...(adapterType === "paperclip_runner" ? { provider: "codex" } : {}),
           model: "gpt-6-astra",
           modelReasoningEffort: "ultra",
         },
@@ -842,6 +844,39 @@ describe("AgentConfigForm environment selector", () => {
     expect(effortChoices).toContain("Maxmax");
     expect(effortChoices).toContain("Ultraultra");
     expect(effortChoices).not.toContain("Minimalminimal");
+    const high = Array.from(document.body.querySelectorAll("button"))
+      .find((button) => button.textContent?.replace(/\s+/g, "").trim() === "Highhigh");
+    expect(high).toBeDefined();
+    await clickElement(high);
+    await clickByText(result.container, "Save");
+    expect(result.onSave).toHaveBeenCalledWith(expect.objectContaining({
+      adapterConfig: expect.objectContaining({ model: "gpt-6-astra", modelReasoningEffort: "high" }),
+    }));
+  });
+
+  it.each(["opencode", "acpx"])("hides Codex effort controls for the native %s provider", async (provider) => {
+    const result = await renderForm([], {
+      adapterType: "paperclip_runner",
+      adapterConfig: { provider, model: "openrouter/deepseek/deepseek-v4-flash-0731" },
+    });
+    roots.push(result.root);
+    expect(result.container.textContent).not.toContain("Thinking effort");
+  });
+
+  it("lets a new native Codex agent select Ultra", async () => {
+    const result = await renderCreateForm([], {
+      adapterType: "paperclip_runner",
+      model: "gpt-6-astra",
+      thinkingEffort: "high",
+      adapterSchemaValues: { provider: "codex" },
+    });
+    roots.push(result.root);
+    await clickByText(result.container, "High");
+    const ultra = Array.from(document.body.querySelectorAll("button"))
+      .find((button) => button.textContent?.replace(/\s+/g, "").trim() === "Ultraultra");
+    expect(ultra).toBeDefined();
+    await clickElement(ultra);
+    expect(result.onChange).toHaveBeenCalledWith({ thinkingEffort: "ultra" });
   });
 
   it("removes a legacy incompatible effort when the model changes to Astra", async () => {
